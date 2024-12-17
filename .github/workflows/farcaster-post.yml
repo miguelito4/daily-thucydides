@@ -1,0 +1,27 @@
+name: Daily Farcaster Post
+
+on:
+  schedule:
+    - cron: '0 17 * * *'  # Runs at 5pm UTC (7pm Sicily during summer time)
+  workflow_dispatch:  # Allows manual triggering
+
+jobs:
+  post-to-farcaster:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          
+      - name: Install dependencies
+        run: npm install
+        
+      - name: Run bot
+        env:
+          NEYNAR_API_KEY: ${{ secrets.NEYNAR_API_KEY }}
+          SIGNER_UUID: ${{ secrets.SIGNER_UUID }}
+        run: node index.js
