@@ -1,0 +1,11 @@
+{
+  "type": "module",
+  "dependencies": {
+    "@farcaster/hub-nodejs": "^0.12.7",
+    "@noble/ed25519": "^2.1.0",
+    "axios": "^1.7.9",
+    "dotenv": "^16.4.7",
+    "ethers": "^6.13.4",
+    "viem": "^2.21.55"
+  }
+}
