@@ -24,4 +24,4 @@ jobs:
         env:
           NEYNAR_API_KEY: ${{ secrets.NEYNAR_API_KEY }}
           SIGNER_UUID: ${{ secrets.SIGNER_UUID }}
-        run: node index.js
+        run: node daily_thucydides_bot.js
