@@ -1,5 +1,5 @@
 # daily-thucydides
-A Farcaster bot that shares a passage from The History of the Peloponnesian War each day.
+A Farcaster bot (<a href="https://warpcast.com/thucydides">@thucydides</a>) that shares a passage from The History of the Peloponnesian War each day.
 
 Text courtesy of Project Gutenberg, available <a href="https://www.gutenberg.org/cache/epub/7142/pg7142.txt">here</a>.
 
