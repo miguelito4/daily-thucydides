@@ -28,25 +28,21 @@ jobs:
 
       - name: Run bot
         env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           NEYNAR_API_KEY: ${{ secrets.NEYNAR_API_KEY }}
+          FARCASTER_FID: ${{ secrets.FARCASTER_FID }}
           SIGNER_UUID: ${{ secrets.SIGNER_UUID }}
         run: node daily_thucydides_bot.js
 
-      # Add these new steps
-      - name: Configure Git
+      - name: Configure Git and Push Changes
+        if: success()
         run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-
-      - name: Commit and push if progress changed
-        run: |
-          git config --global user.name 'GitHub Action'
+          git config --global user.name 'GitHub Actions'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
           git add progress.json
           if [[ -n "$(git status --porcelain)" ]]; then
-            echo "Changes detected in progress.json"
             git commit -m "Update reading progress"
-            git push origin main
+            git push
           else
             echo "No changes to progress.json"
           fi

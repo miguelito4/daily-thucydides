@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import path from 'path';
+import { execSync } from 'child_process';
 
 // Setup directory paths
 const __filename = fileURLToPath(import.meta.url);
@@ -14,12 +15,35 @@ dotenv.config({ path: path.join(__dirname, '.env') });
 
 // Initialize constants AFTER environment variables are loaded
 const NEYNAR_API_KEY = process.env.NEYNAR_API_KEY;
+const GITHUB_TOKEN = process.env.BOT_TOKEN;
 const CAST_URL = 'https://api.neynar.com/v2/farcaster/cast';
 const PASSAGES_FILE = path.join(__dirname, 'thucydides.json');
 const PROGRESS_FILE = path.join(__dirname, 'progress.json');
 const FARCASTER_FID = process.env.FARCASTER_FID;
 const SIGNER_UUID = process.env.SIGNER_UUID;
 const MAX_CHARACTERS = 824;
+
+async function configureGit() {
+    try {
+        execSync('git config user.name "GitHub Actions Bot"');
+        execSync('git config user.email "actions@github.com"');
+    } catch (error) {
+        console.error('Error configuring git:', error);
+        throw error;
+    }
+}
+
+async function commitAndPushProgress() {
+    try {
+        execSync('git add progress.json');
+        execSync('git commit -m "Update progress.json [skip ci]"');
+        execSync(`git push https://${GITHUB_TOKEN}@github.com/${process.env.GITHUB_REPOSITORY}.git HEAD:main`);
+        console.log('Successfully committed and pushed progress update');
+    } catch (error) {
+        console.error('Error committing and pushing:', error);
+        throw error;
+    }
+}
 
 // Quick environment check
 console.log('Environment check:', {
@@ -136,16 +160,12 @@ async function sendCast(text) {
 
 async function main() {
     try {
-        // Log startup
-        console.log('Bot starting up...');
+        // Configure git first
+        await configureGit();
         
         // Load and verify passages
         const passages = loadPassages();
         console.log(`Loaded ${passages.length} passages`);
-        console.log('First passage:', {
-            book: passages[0].book,
-            chapter: passages[0].chapter
-        });
         
         // Load and verify progress
         let lastIndex = loadProgress();
@@ -167,19 +187,19 @@ async function main() {
         // Format and verify text
         const formattedText = formatPassage(passage, nextIndex, passages.length);
         console.log('Formatted text length:', formattedText.length);
-        console.log('Formatted text preview:', formattedText.substring(0, 100) + '...');
         
         // Send cast
         await sendCast(formattedText);
         console.log('Cast sent successfully');
         
-        // Save and verify progress
+        // Save progress locally
         saveProgress(nextIndex);
-        console.log('Saved new progress. Next last_index will be:', nextIndex);
+        console.log('Saved new progress locally. Next last_index will be:', nextIndex);
         
-        // Verify progress file
-        const verifyProgress = loadProgress();
-        console.log('Verified saved progress:', verifyProgress);
+        // Commit and push the updated progress
+        await commitAndPushProgress();
+        console.log('Progress committed and pushed to repository');
+        
     } catch (error) {
         console.error('Bot execution failed:', error);
         process.exit(1);
