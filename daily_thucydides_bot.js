@@ -177,22 +177,36 @@ async function main() {
         saveProgress(nextIndex);
         console.log('Saved new progress. Next last_index will be:', nextIndex);
         
+// Verify progress file
+function saveProgress(index) {
+    try {
+        const progress = { last_index: index };
+        console.log('Writing progress to file:', progress);
+        writeFileSync(PROGRESS_FILE, JSON.stringify(progress, null, 2));
+        console.log('Progress file written successfully');
+        
+        // Verify the write
+        const verified = JSON.parse(readFileSync(PROGRESS_FILE, 'utf-8'));
+        console.log('Verified written progress:', verified);
+    } catch (error) {
+        console.error('Error saving progress:', error);
+        throw error;
+    }
+}
+
+async function main() {
+    try {
+        // ... rest of your main function code ...
+        saveProgress(nextIndex);
+        console.log('Saved new progress. Next last_index will be:', nextIndex);
+        
         // Verify progress file
-        function saveProgress(index) {
-            try {
-                const progress = { last_index: index };
-                console.log('Writing progress to file:', progress);
-                writeFileSync(PROGRESS_FILE, JSON.stringify(progress, null, 2));
-                console.log('Progress file written successfully');
-                
-                // Verify the write
-                const verified = JSON.parse(readFileSync(PROGRESS_FILE, 'utf-8'));
-                console.log('Verified written progress:', verified);
-            } catch (error) {
-                console.error('Error saving progress:', error);
-                throw error; 
-            }
-        }
+        const verifyProgress = loadProgress();
+        console.log('Verified saved progress:', verifyProgress);
+    } catch (error) {
+        console.error('Bot execution failed:', error);
+        process.exit(1);
+    }
 }
 
 // Run the main function
