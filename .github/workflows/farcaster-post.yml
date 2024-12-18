@@ -8,20 +8,31 @@ on:
 jobs:
   post-to-farcaster:
     runs-on: ubuntu-latest
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          
+
       - name: Install dependencies
         run: npm install
-        
+
       - name: Run bot
         env:
           NEYNAR_API_KEY: ${{ secrets.NEYNAR_API_KEY }}
           SIGNER_UUID: ${{ secrets.SIGNER_UUID }}
         run: node daily_thucydides_bot.js
+
+      # Add these new steps
+      - name: Configure Git
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+      - name: Commit and push if progress changed
+        run: |
+          git add progress.json
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Update reading progress" && git push)
