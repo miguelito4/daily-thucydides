@@ -13,51 +13,14 @@ const __dirname = dirname(__filename);
 // Load environment variables
 dotenv.config({ path: path.join(__dirname, '.env') });
 
-// Initialize constants AFTER environment variables are loaded
+// Initialize constants
 const NEYNAR_API_KEY = process.env.NEYNAR_API_KEY;
-const GITHUB_TOKEN = process.env.BOT_TOKEN;
 const CAST_URL = 'https://api.neynar.com/v2/farcaster/cast';
 const PASSAGES_FILE = path.join(__dirname, 'thucydides.json');
 const PROGRESS_FILE = path.join(__dirname, 'progress.json');
 const FARCASTER_FID = process.env.FARCASTER_FID;
 const SIGNER_UUID = process.env.SIGNER_UUID;
 const MAX_CHARACTERS = 824;
-
-async function configureGit() {
-    try {
-        // Write the progress file first
-        writeFileSync(PROGRESS_FILE, JSON.stringify({ last_index: nextIndex }, null, 2));
-        
-        execSync('git config user.name "GitHub Actions Bot"');
-        execSync('git config user.email "actions@github.com"');
-        execSync('git add progress.json');
-        
-        // Check if there are changes to commit
-        const status = execSync('git status --porcelain').toString();
-        if (status) {
-            execSync('git commit -m "Update progress.json [skip ci]"');
-            execSync('git push');
-            console.log('Successfully committed and pushed progress update');
-        } else {
-            console.log('No changes to commit in progress.json');
-        }
-    } catch (error) {
-        console.error('Error in git operations:', error);
-        throw error;
-    }
-}
-
-async function commitAndPushProgress() {
-    try {
-        execSync('git add progress.json');
-        execSync('git commit -m "Update progress.json [skip ci]"');
-        execSync(`git push https://${GITHUB_TOKEN}@github.com/${process.env.GITHUB_REPOSITORY}.git HEAD:main`);
-        console.log('Successfully committed and pushed progress update');
-    } catch (error) {
-        console.error('Error committing and pushing:', error);
-        throw error;
-    }
-}
 
 // Quick environment check
 console.log('Environment check:', {
@@ -72,7 +35,7 @@ function loadPassages() {
         return JSON.parse(data);
     } catch (error) {
         console.error('Error loading passages:', error);
-        process.exit(1);
+        throw error;
     }
 }
 
@@ -89,51 +52,10 @@ function loadProgress() {
     }
 }
 
-function saveProgress(index) {
-    try {
-        writeFileSync(PROGRESS_FILE, JSON.stringify({ last_index: index }));
-    } catch (error) {
-        console.error('Error saving progress:', error);
-    }
-}
-
-function clipText(text, maxLength = MAX_CHARACTERS) {
-    if (!text) return '';
-    
-    if (text.length <= maxLength) return text;
-    
-    // Try to find the last sentence ending
-    const textToCheck = text.slice(0, maxLength);
-    let lastBreak = textToCheck.lastIndexOf('. ');
-    
-    if (lastBreak !== -1) {
-        return text.slice(0, lastBreak + 1);
-    }
-    
-    // Try other punctuation
-    for (const punct of ['; ', '! ', '? ', ', ']) {
-        lastBreak = textToCheck.lastIndexOf(punct);
-        if (lastBreak !== -1) {
-            return text.slice(0, lastBreak + 1) + '...';
-        }
-    }
-    
-    // Try breaking at last space
-    lastBreak = textToCheck.lastIndexOf(' ');
-    if (lastBreak !== -1) {
-        return text.slice(0, lastBreak) + '...';
-    }
-    
-    // Last resort: hard break
-    return text.slice(0, maxLength - 3) + '...';
-}
-
 function formatPassage(passage, index, total) {
     const partInfo = passage.part ? ` [${passage.part}]` : '';
     const header = `${passage.book} - ${passage.chapter}${partInfo}\n\n`;
-    const remainingChars = MAX_CHARACTERS - header.length;
-    const clippedText = passage.text.substring(0, remainingChars);
-    return header + clippedText;
+    return header + passage.text;
 }
 
 async function sendCast(text) {
@@ -172,11 +94,32 @@ async function sendCast(text) {
     }
 }
 
+async function configureGit(index) {
+    try {
+        // Write the progress file first
+        writeFileSync(PROGRESS_FILE, JSON.stringify({ last_index: index }, null, 2));
+        
+        execSync('git config user.name "GitHub Actions Bot"');
+        execSync('git config user.email "actions@github.com"');
+        execSync('git add progress.json');
+        
+        // Check if there are changes to commit
+        const status = execSync('git status --porcelain').toString();
+        if (status) {
+            execSync('git commit -m "Update progress.json [skip ci]"');
+            execSync('git push');
+            console.log('Successfully committed and pushed progress update');
+        } else {
+            console.log('No changes to commit in progress.json');
+        }
+    } catch (error) {
+        console.error('Error in git operations:', error);
+        throw error;
+    }
+}
+
 async function main() {
     try {
-        // Configure git first
-        await configureGit();
-        
         // Load and verify passages
         const passages = loadPassages();
         console.log(`Loaded ${passages.length} passages`);
@@ -206,13 +149,8 @@ async function main() {
         await sendCast(formattedText);
         console.log('Cast sent successfully');
         
-        // Save progress locally
-        saveProgress(nextIndex);
-        console.log('Saved new progress locally. Next last_index will be:', nextIndex);
-        
-        // Commit and push the updated progress
-        await commitAndPushProgress();
-        console.log('Progress committed and pushed to repository');
+        // Configure git and push changes
+        await configureGit(nextIndex);
         
     } catch (error) {
         console.error('Bot execution failed:', error);
