@@ -91,9 +91,10 @@ function clipText(text, maxLength = MAX_CHARACTERS) {
 }
 
 function formatPassage(passage, index, total) {
-    const header = `${passage.book} - ${passage.chapter} (${index + 1}/${total})\n\n`;
+    const partInfo = passage.part ? ` [${passage.part}]` : '';
+    const header = `${passage.book} - ${passage.chapter}${partInfo}\n\n`;
     const remainingChars = MAX_CHARACTERS - header.length;
-    const clippedText = clipText(passage.text, remainingChars);
+    const clippedText = passage.text.substring(0, remainingChars);
     return header + clippedText;
 }
 
@@ -177,13 +178,21 @@ async function main() {
         console.log('Saved new progress. Next last_index will be:', nextIndex);
         
         // Verify progress file
-        const verifyProgress = loadProgress();
-        console.log('Verified saved progress:', verifyProgress);
-        
-    } catch (error) {
-        console.error('Bot execution failed:', error);
-        process.exit(1);
-    }
+        function saveProgress(index) {
+            try {
+                const progress = { last_index: index };
+                console.log('Writing progress to file:', progress);
+                writeFileSync(PROGRESS_FILE, JSON.stringify(progress, null, 2));
+                console.log('Progress file written successfully');
+                
+                // Verify the write
+                const verified = JSON.parse(readFileSync(PROGRESS_FILE, 'utf-8'));
+                console.log('Verified written progress:', verified);
+            } catch (error) {
+                console.error('Error saving progress:', error);
+                throw error; 
+            }
+        }
 }
 
 // Run the main function
