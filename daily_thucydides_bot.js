@@ -25,10 +25,24 @@ const MAX_CHARACTERS = 824;
 
 async function configureGit() {
     try {
+        // Write the progress file first
+        writeFileSync(PROGRESS_FILE, JSON.stringify({ last_index: nextIndex }, null, 2));
+        
         execSync('git config user.name "GitHub Actions Bot"');
         execSync('git config user.email "actions@github.com"');
+        execSync('git add progress.json');
+        
+        // Check if there are changes to commit
+        const status = execSync('git status --porcelain').toString();
+        if (status) {
+            execSync('git commit -m "Update progress.json [skip ci]"');
+            execSync('git push');
+            console.log('Successfully committed and pushed progress update');
+        } else {
+            console.log('No changes to commit in progress.json');
+        }
     } catch (error) {
-        console.error('Error configuring git:', error);
+        console.error('Error in git operations:', error);
         throw error;
     }
 }
