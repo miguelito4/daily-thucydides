@@ -131,7 +131,15 @@ async function main() {
         // Calculate and verify next index
         const nextIndex = (lastIndex + 1) % passages.length;
         console.log('Next index to post:', nextIndex);
-        
+
+        // Add this right after you calculate nextIndex
+        console.log('DEBUG - Current state:', {
+            progressFileContent: JSON.parse(readFileSync(PROGRESS_FILE, 'utf-8')),
+            lastIndex: lastIndex,
+            nextIndex: nextIndex,
+            totalPassages: passages.length
+        });
+
         // Get and verify passage
         const passage = passages[nextIndex];
         console.log('Selected passage:', {
