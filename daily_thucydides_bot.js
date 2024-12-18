@@ -1,4 +1,4 @@
-import { post } from 'axios';
+import axios from 'axios';
 import { readFileSync, writeFileSync, existsSync } from 'fs';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
@@ -114,7 +114,7 @@ async function sendCast(text) {
             text_length: text.length,
         });
         
-        const response = await post(CAST_URL, payload, {
+        const response = await axios.post(CAST_URL, payload, {
             headers: {
                 'api_key': NEYNAR_API_KEY,
                 'Content-Type': 'application/json',
