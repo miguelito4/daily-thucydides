@@ -46,7 +46,9 @@ function loadProgress() {
     try {
         if (existsSync(PROGRESS_FILE)) {
             const data = readFileSync(PROGRESS_FILE, 'utf-8');
-            return JSON.parse(data).last_index || -1;
+            const parsed = JSON.parse(data);
+            // Check if last_index is explicitly defined
+            return parsed.last_index === undefined ? -1 : parsed.last_index;
         }
         return -1;
     } catch (error) {
