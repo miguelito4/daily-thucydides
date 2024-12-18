@@ -35,4 +35,4 @@ jobs:
       - name: Commit and push if progress changed
         run: |
           git add progress.json
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Update reading progress" && git push)
+          git diff --quiet || (git add progress.json && git commit -m "Update reading progress" && git push)

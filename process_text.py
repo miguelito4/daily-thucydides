@@ -1,6 +1,54 @@
 import json
 import re
 
+def clip_text(text, max_length=824):
+    """
+    Clips text at a natural break point (sentence or punctuation) before max_length.
+    """
+    if len(text) <= max_length:
+        return text
+
+    # Try to find the last sentence ending before the limit
+    text_to_check = text[:max_length]
+    
+    # First try to break at a sentence
+    last_break = text_to_check.rfind('. ')
+    if last_break != -1:
+        return text[:last_break + 1]
+    
+    # Then try other punctuation
+    for punct in ['; ', '! ', '? ', ', ']:
+        last_break = text_to_check.rfind(punct)
+        if last_break != -1:
+            return text[:last_break + 1] + '...'
+    
+    # If no punctuation, break at last space
+    last_break = text_to_check.rfind(' ')
+    if last_break != -1:
+        return text[:last_break] + '...'
+    
+    # Last resort: hard break at limit
+    return text[:max_length-3] + '...'
+
+def process_text_content(text_lines):
+    # Join lines into paragraphs
+    paragraphs = []
+    current_paragraph = []
+    for line in text_lines:
+        if line:
+            current_paragraph.append(line)
+        elif current_paragraph:
+            paragraphs.append(' '.join(current_paragraph))
+            current_paragraph = []
+    
+    # Add final paragraph if exists
+    if current_paragraph:
+        paragraphs.append(' '.join(current_paragraph))
+    
+    # Join paragraphs with double newlines and clip
+    full_text = '\n\n'.join(paragraphs)
+    return clip_text(full_text)
+
 def process_thucydides(file_path):
     with open(file_path, 'r', encoding='utf-8') as f:
         content = f.read()
@@ -30,7 +78,7 @@ def process_thucydides(file_path):
             if current_text:
                 current_text.append('')  # Preserve paragraph break
             continue
-            
+        
         # Check for new book
         book_match = re.match(r'^BOOK [IVXLCDM]+$', line)
         if book_match:
@@ -46,7 +94,7 @@ def process_thucydides(file_path):
             current_book = line
             current_text = []
             continue
-            
+        
         # Check for new chapter
         chapter_match = re.match(r'^CHAPTER [IVXLCDM]+$', line)
         if chapter_match:
@@ -76,7 +124,7 @@ def process_thucydides(file_path):
                 "chapter": current_chapter,
                 "text": text
             })
-
+    
     # Save to JSON
     with open('thucydides.json', 'w', encoding='utf-8') as json_file:
         json.dump(passages, json_file, indent=4, ensure_ascii=False)
@@ -90,25 +138,6 @@ def process_thucydides(file_path):
         print(f"Chapter: {passages[0]['chapter']}")
         print("\nText preview (first 300 characters):")
         print(f"{passages[0]['text'][:300]}...")
-
-def process_text_content(text_lines):
-    # Join lines into paragraphs
-    paragraphs = []
-    current_paragraph = []
-    
-    for line in text_lines:
-        if line:
-            current_paragraph.append(line)
-        elif current_paragraph:
-            paragraphs.append(' '.join(current_paragraph))
-            current_paragraph = []
-    
-    # Add final paragraph if exists
-    if current_paragraph:
-        paragraphs.append(' '.join(current_paragraph))
-    
-    # Join paragraphs with double newlines
-    return '\n\n'.join(paragraphs)
 
 if __name__ == "__main__":
     process_thucydides("thucydides.txt")
