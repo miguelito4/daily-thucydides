@@ -32,7 +32,10 @@ console.log('Environment check:', {
 function loadPassages() {
     try {
         const data = readFileSync(PASSAGES_FILE, 'utf-8');
-        return JSON.parse(data);
+        const passages = JSON.parse(data);
+        console.log('First few passages parts:', passages.slice(0, 5).map(p => p.part));
+        console.log(`Loaded ${passages.length} total passages`);
+        return passages;
     } catch (error) {
         console.error('Error loading passages:', error);
         throw error;
@@ -52,9 +55,8 @@ function loadProgress() {
     }
 }
 
-function formatPassage(passage, index, total) {
-    const partInfo = passage.part ? ` [${passage.part}]` : '';
-    const header = `${passage.book} - ${passage.chapter}${partInfo}\n\n`;
+function formatPassage(passage) {
+    const header = `${passage.book} - ${passage.chapter} [${passage.part}]\n\n`;
     return header + passage.text;
 }
 
@@ -122,7 +124,6 @@ async function main() {
     try {
         // Load and verify passages
         const passages = loadPassages();
-        console.log(`Loaded ${passages.length} passages`);
         
         // Load and verify progress
         let lastIndex = loadProgress();
@@ -131,27 +132,33 @@ async function main() {
         // Calculate and verify next index
         const nextIndex = (lastIndex + 1) % passages.length;
         console.log('Next index to post:', nextIndex);
-
-        // Add this right after you calculate nextIndex
+        
+        // Debug current state
         console.log('DEBUG - Current state:', {
             progressFileContent: JSON.parse(readFileSync(PROGRESS_FILE, 'utf-8')),
             lastIndex: lastIndex,
             nextIndex: nextIndex,
-            totalPassages: passages.length
+            totalPassages: passages.length,
+            currentPart: passages[nextIndex].part
         });
-
+        
         // Get and verify passage
         const passage = passages[nextIndex];
         console.log('Selected passage:', {
             index: nextIndex,
             book: passage.book,
             chapter: passage.chapter,
+            part: passage.part,
             textPreview: passage.text.substring(0, 50) + '...'
         });
         
         // Format and verify text
-        const formattedText = formatPassage(passage, nextIndex, passages.length);
+        const formattedText = formatPassage(passage);
         console.log('Formatted text length:', formattedText.length);
+        
+        if (formattedText.length > MAX_CHARACTERS) {
+            console.error('Warning: Formatted text exceeds maximum character limit');
+        }
         
         // Send cast
         await sendCast(formattedText);
@@ -159,6 +166,10 @@ async function main() {
         
         // Configure git and push changes
         await configureGit(nextIndex);
+        
+        // Verify final state
+        const finalProgress = loadProgress();
+        console.log('Final progress state:', finalProgress);
         
     } catch (error) {
         console.error('Bot execution failed:', error);
