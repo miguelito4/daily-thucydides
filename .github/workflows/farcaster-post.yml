@@ -2,8 +2,8 @@ name: Daily Farcaster Post
 
 on:
   schedule:
-    - cron: '0 17 * * *'  # Runs at 5pm UTC (7pm Sicily during summer time)
-  workflow_dispatch:  # Allows manual triggering
+    - cron: '0 17 * * *'
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -11,12 +11,24 @@ permissions:
 jobs:
   post-to-farcaster:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Important: Get full git history
 
       - name: Fetch latest changes
         run: git pull origin main
+
+      - name: Create progress.json if it doesn't exist
+        run: |
+          if [ ! -f progress.json ]; then
+            echo '{"last_index": -1}' > progress.json
+            git add progress.json
+            git config --global user.name 'GitHub Actions'
+            git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+            git commit -m "Initialize progress.json"
+            git push
+          fi
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -34,15 +46,14 @@ jobs:
           SIGNER_UUID: ${{ secrets.SIGNER_UUID }}
         run: node daily_thucydides_bot.js
 
-      - name: Configure Git and Push Changes
-        if: success()
+      - name: Commit and push if changed
         run: |
           git config --global user.name 'GitHub Actions'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
           git add progress.json
-          if [[ -n "$(git status --porcelain)" ]]; then
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
             git commit -m "Update reading progress"
             git push
-          else
-            echo "No changes to progress.json"
           fi
