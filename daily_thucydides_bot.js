@@ -135,24 +135,51 @@ async function sendCast(text) {
 
 async function main() {
     try {
+        // Log startup
+        console.log('Bot starting up...');
+        
+        // Load and verify passages
         const passages = loadPassages();
-        if (!passages.length) {
-            throw new Error('No passages found');
-        }
+        console.log(`Loaded ${passages.length} passages`);
+        console.log('First passage:', {
+            book: passages[0].book,
+            chapter: passages[0].chapter
+        });
         
+        // Load and verify progress
         let lastIndex = loadProgress();
+        console.log('Current progress (last_index):', lastIndex);
+        
+        // Calculate and verify next index
         const nextIndex = (lastIndex + 1) % passages.length;
+        console.log('Next index to post:', nextIndex);
+        
+        // Get and verify passage
         const passage = passages[nextIndex];
+        console.log('Selected passage:', {
+            index: nextIndex,
+            book: passage.book,
+            chapter: passage.chapter,
+            textPreview: passage.text.substring(0, 50) + '...'
+        });
         
-        if (!passage || !passage.text) {
-            throw new Error(`Invalid passage at index ${nextIndex}`);
-        }
-        
+        // Format and verify text
         const formattedText = formatPassage(passage, nextIndex, passages.length);
-        await sendCast(formattedText);
-        saveProgress(nextIndex);
+        console.log('Formatted text length:', formattedText.length);
+        console.log('Formatted text preview:', formattedText.substring(0, 100) + '...');
         
-        console.log(`Successfully posted passage ${nextIndex + 1}/${passages.length}`);
+        // Send cast
+        await sendCast(formattedText);
+        console.log('Cast sent successfully');
+        
+        // Save and verify progress
+        saveProgress(nextIndex);
+        console.log('Saved new progress. Next last_index will be:', nextIndex);
+        
+        // Verify progress file
+        const verifyProgress = loadProgress();
+        console.log('Verified saved progress:', verifyProgress);
+        
     } catch (error) {
         console.error('Bot execution failed:', error);
         process.exit(1);
