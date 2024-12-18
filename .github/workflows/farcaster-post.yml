@@ -5,6 +5,9 @@ on:
     - cron: '0 17 * * *'  # Runs at 5pm UTC (7pm Sicily during summer time)
   workflow_dispatch:  # Allows manual triggering
 
+permissions:
+  contents: write
+
 jobs:
   post-to-farcaster:
     runs-on: ubuntu-latest
