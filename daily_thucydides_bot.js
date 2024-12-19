@@ -104,14 +104,15 @@ async function sendCast(text, passage) {
         const payload = {
             text,
             fid: FARCASTER_FID,
-            signer_uuid: SIGNER_UUID,
-            // Using both embedded_url and parent_cast_hash for threading
-            ...(lastHash && !isFirstPartOfChapter ? { 
-                embedded_url: `https://warpcast.com/~/cast/${lastHash}`,
-                parent_cast_hash: lastHash
-            } : {})
+            signer_uuid: SIGNER_UUID
         };
 
+        if (lastHash && !isFirstPartOfChapter) {
+            // Just use the hash directly
+            payload.parent_url = lastHash;
+            console.log('Adding parent hash:', lastHash);
+        }
+        
         console.log('Sending cast with payload:', {
             ...payload,
             signer_uuid: '***',
