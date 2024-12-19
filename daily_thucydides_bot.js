@@ -18,6 +18,7 @@ const NEYNAR_API_KEY = process.env.NEYNAR_API_KEY;
 const CAST_URL = 'https://api.neynar.com/v2/farcaster/cast';
 const PASSAGES_FILE = path.join(__dirname, 'thucydides.json');
 const PROGRESS_FILE = path.join(__dirname, 'progress.json');
+const HASH_FILE = path.join(__dirname, 'last_hash.json');
 const FARCASTER_FID = process.env.FARCASTER_FID;
 const SIGNER_UUID = process.env.SIGNER_UUID;
 const MAX_CHARACTERS = 824;
@@ -57,21 +58,48 @@ function loadProgress() {
     }
 }
 
+function loadLastHash() {
+    try {
+        if (existsSync(HASH_FILE)) {
+            const data = readFileSync(HASH_FILE, 'utf-8');
+            return JSON.parse(data).hash;
+        }
+        return null;
+    } catch (error) {
+        console.error('Error loading last hash:', error);
+        return null;
+    }
+}
+
+function saveLastHash(hash) {
+    try {
+        writeFileSync(HASH_FILE, JSON.stringify({ hash }, null, 2));
+    } catch (error) {
+        console.error('Error saving last hash:', error);
+    }
+}
+
 function formatPassage(passage) {
     const header = `${passage.book} - ${passage.chapter} [${passage.part}]\n\n`;
     return header + passage.text;
 }
 
-async function sendCast(text) {
+async function sendCast(text, passage) {
     if (!text) {
         throw new Error('Cannot send empty cast');
     }
     
     try {
+        // Only include parent_hash if it's not the first part of a chapter
+        const lastHash = loadLastHash();
+        const isFirstPartOfChapter = passage.part.startsWith('1/');
+        
         const payload = {
             text,
             fid: FARCASTER_FID,
             signer_uuid: SIGNER_UUID,
+            // Only include parent_hash if we have one and it's not the start of a chapter
+            ...(lastHash && !isFirstPartOfChapter ? { parent_hash: lastHash } : {})
         };
         
         console.log('Sending cast with payload:', {
@@ -85,6 +113,11 @@ async function sendCast(text) {
                 'Content-Type': 'application/json',
             },
         });
+        
+        // Save the hash for the next cast
+        if (response.data.cast.hash) {
+            saveLastHash(response.data.cast.hash);
+        }
         
         console.log('Cast sent successfully:', response.data);
         return response.data;
@@ -105,16 +138,16 @@ async function configureGit(index) {
         
         execSync('git config user.name "GitHub Actions Bot"');
         execSync('git config user.email "actions@github.com"');
-        execSync('git add progress.json');
+        execSync('git add progress.json last_hash.json');
         
         // Check if there are changes to commit
         const status = execSync('git status --porcelain').toString();
         if (status) {
-            execSync('git commit -m "Update progress.json [skip ci]"');
+            execSync('git commit -m "Update progress and hash tracking [skip ci]"');
             execSync('git push');
-            console.log('Successfully committed and pushed progress update');
+            console.log('Successfully committed and pushed updates');
         } else {
-            console.log('No changes to commit in progress.json');
+            console.log('No changes to commit');
         }
     } catch (error) {
         console.error('Error in git operations:', error);
@@ -138,6 +171,7 @@ async function main() {
         // Debug current state
         console.log('DEBUG - Current state:', {
             progressFileContent: JSON.parse(readFileSync(PROGRESS_FILE, 'utf-8')),
+            lastHash: loadLastHash(),
             lastIndex: lastIndex,
             nextIndex: nextIndex,
             totalPassages: passages.length,
@@ -163,7 +197,7 @@ async function main() {
         }
         
         // Send cast
-        await sendCast(formattedText);
+        await sendCast(formattedText, passage);
         console.log('Cast sent successfully');
         
         // Configure git and push changes
