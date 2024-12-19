@@ -101,24 +101,30 @@ async function sendCast(text, passage) {
             currentPart: passage.part
         });
 
+        // If this is a reply, use the reply endpoint
+        const endpoint = (lastHash && !isFirstPartOfChapter) 
+            ? 'https://api.neynar.com/v2/farcaster/cast/reply'
+            : CAST_URL;
+
         const payload = {
             text,
             fid: FARCASTER_FID,
             signer_uuid: SIGNER_UUID
         };
 
+        // Add target_cast_id for replies
         if (lastHash && !isFirstPartOfChapter) {
-            // Using Neynar API URL format
-            payload.parent_url = `https://api.neynar.com/v2/farcaster/cast/${lastHash}`;
+            payload.target_cast_hash = lastHash;
         }
         
         console.log('Sending cast with payload:', {
             ...payload,
             signer_uuid: '***',
-            text_length: text.length
+            text_length: text.length,
+            endpoint
         });
 
-        const response = await axios.post(CAST_URL, payload, {
+        const response = await axios.post(endpoint, payload, {
             headers: {
                 'api_key': NEYNAR_API_KEY,
                 'Content-Type': 'application/json',
@@ -135,6 +141,9 @@ async function sendCast(text, passage) {
     } catch (error) {
         console.error('Error sending cast:', {
             status: error.response?.status,
+            data: error.response?.data,
+            message: error.message,
+            stack: error.stack
         });
         throw error;
     }
