@@ -108,9 +108,8 @@ async function sendCast(text, passage) {
         };
 
         if (lastHash && !isFirstPartOfChapter) {
-            // Just use the hash directly
-            payload.parent_url = lastHash;
-            console.log('Adding parent hash:', lastHash);
+            // Using Neynar API URL format
+            payload.parent_url = `https://api.neynar.com/v2/farcaster/cast/${lastHash}`;
         }
         
         console.log('Sending cast with payload:', {
@@ -136,9 +135,6 @@ async function sendCast(text, passage) {
     } catch (error) {
         console.error('Error sending cast:', {
             status: error.response?.status,
-            data: error.response?.data,
-            message: error.message,
-            stack: error.stack
         });
         throw error;
     }
