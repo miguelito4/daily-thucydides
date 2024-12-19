@@ -2,7 +2,7 @@ name: Daily Farcaster Post
 
 on:
   schedule:
-    - cron: '0 17 * * *'  # Fixed the cron syntax
+    - cron: '0 17 * * *'
   workflow_dispatch:
 
 permissions:
@@ -19,16 +19,17 @@ jobs:
       - name: Fetch latest changes
         run: git pull origin main
 
-      - name: Create progress.json if it doesn't exist
+      - name: Create files if they don't exist
         run: |
           if [ ! -f progress.json ]; then
             echo '{"last_index": -1}' > progress.json
-            git add progress.json
-            git config --global user.name 'GitHub Actions'
-            git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-            git commit -m "Initialize progress.json"
-            git push
           fi
+          if [ ! -f last_hash.json ]; then
+            echo '{"hash": null}' > last_hash.json
+          fi
+          git config --global user.name 'GitHub Actions'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add progress.json last_hash.json
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -50,10 +51,5 @@ jobs:
         run: |
           git config --global user.name 'GitHub Actions'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          git add progress.json
-          if git diff --staged --quiet; then
-            echo "No changes to commit"
-          else
-            git commit -m "Update reading progress"
-            git push
-          fi
+          git add progress.json last_hash.json
+          git diff --staged --quiet || (git commit -m "Update reading progress" && git push)

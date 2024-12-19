@@ -48,7 +48,6 @@ function loadProgress() {
         if (existsSync(PROGRESS_FILE)) {
             const data = readFileSync(PROGRESS_FILE, 'utf-8');
             const parsed = JSON.parse(data);
-            // Check if last_index is explicitly defined
             return parsed.last_index === undefined ? -1 : parsed.last_index;
         }
         return -1;
@@ -62,7 +61,9 @@ function loadLastHash() {
     try {
         if (existsSync(HASH_FILE)) {
             const data = readFileSync(HASH_FILE, 'utf-8');
-            return JSON.parse(data).hash;
+            const parsed = JSON.parse(data);
+            console.log('Loaded last hash:', parsed);
+            return parsed.hash;
         }
         return null;
     } catch (error) {
@@ -74,6 +75,7 @@ function loadLastHash() {
 function saveLastHash(hash) {
     try {
         writeFileSync(HASH_FILE, JSON.stringify({ hash }, null, 2));
+        console.log('Saved new hash:', hash);
     } catch (error) {
         console.error('Error saving last hash:', error);
     }
@@ -90,23 +92,31 @@ async function sendCast(text, passage) {
     }
     
     try {
-        // Only include parent_hash if it's not the first part of a chapter
         const lastHash = loadLastHash();
         const isFirstPartOfChapter = passage.part.startsWith('1/');
         
+        console.log('Threading debug:', {
+            lastHash,
+            isFirstPartOfChapter,
+            currentPart: passage.part
+        });
+
         const payload = {
             text,
             fid: FARCASTER_FID,
-            signer_uuid: SIGNER_UUID,
-            // Only include parent_hash if we have one and it's not the start of a chapter
-            ...(lastHash && !isFirstPartOfChapter ? { parent_hash: lastHash } : {})
+            signer_uuid: SIGNER_UUID
         };
+
+        if (lastHash && !isFirstPartOfChapter) {
+            payload.parent_hash = lastHash;
+        }
         
         console.log('Sending cast with payload:', {
             ...payload,
-            text_length: text.length,
+            signer_uuid: '***',
+            text_length: text.length
         });
-        
+
         const response = await axios.post(CAST_URL, payload, {
             headers: {
                 'api_key': NEYNAR_API_KEY,
@@ -114,19 +124,14 @@ async function sendCast(text, passage) {
             },
         });
         
-        // Save the hash for the next cast
-        if (response.data.cast.hash) {
+        if (response.data.cast && response.data.cast.hash) {
             saveLastHash(response.data.cast.hash);
         }
-        
+
         console.log('Cast sent successfully:', response.data);
         return response.data;
     } catch (error) {
-        console.error('Error sending cast:', {
-            status: error.response?.status,
-            data: error.response?.data,
-            message: error.message,
-        });
+        console.error('Error sending cast:', error);
         throw error;
     }
 }
