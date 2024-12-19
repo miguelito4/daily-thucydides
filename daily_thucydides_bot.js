@@ -101,11 +101,6 @@ async function sendCast(text, passage) {
             currentPart: passage.part
         });
 
-        // If this is a reply, use the reply endpoint
-        const endpoint = (lastHash && !isFirstPartOfChapter) 
-            ? 'https://api.neynar.com/v2/farcaster/cast/reply'
-            : CAST_URL;
-
         const payload = {
             text,
             fid: FARCASTER_FID,
@@ -121,10 +116,9 @@ async function sendCast(text, passage) {
             ...payload,
             signer_uuid: '***',
             text_length: text.length,
-            endpoint
         });
 
-        const response = await axios.post(endpoint, payload, {
+        const response = await axios.post(CAST_URL, payload, {
             headers: {
                 'api_key': NEYNAR_API_KEY,
                 'Content-Type': 'application/json',
@@ -139,12 +133,7 @@ async function sendCast(text, passage) {
         console.log('Cast sent successfully:', response.data);
         return response.data;
     } catch (error) {
-        console.error('Error sending cast:', {
-            status: error.response?.status,
-            data: error.response?.data,
-            message: error.message,
-            stack: error.stack
-        });
+        console.error('Error sending cast:', error),
         throw error;
     }
 }
