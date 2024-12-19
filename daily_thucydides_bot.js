@@ -108,7 +108,9 @@ async function sendCast(text, passage) {
         };
 
         if (lastHash && !isFirstPartOfChapter) {
-            payload.parent_hash = lastHash;
+            // Add the parent_url in the required Warpcast format
+            payload.parent_url = `https://warpcast.com/~/cast/${lastHash}`;
+            console.log('Adding parent URL:', payload.parent_url);
         }
         
         console.log('Sending cast with payload:', {
@@ -131,7 +133,11 @@ async function sendCast(text, passage) {
         console.log('Cast sent successfully:', response.data);
         return response.data;
     } catch (error) {
-        console.error('Error sending cast:', error);
+        console.error('Error sending cast:', {
+            status: error.response?.status,
+            data: error.response?.data,
+            message: error.message,
+        });
         throw error;
     }
 }
