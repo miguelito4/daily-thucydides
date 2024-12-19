@@ -104,15 +104,14 @@ async function sendCast(text, passage) {
         const payload = {
             text,
             fid: FARCASTER_FID,
-            signer_uuid: SIGNER_UUID
+            signer_uuid: SIGNER_UUID,
+            // Using both embedded_url and parent_cast_hash for threading
+            ...(lastHash && !isFirstPartOfChapter ? { 
+                embedded_url: `https://warpcast.com/~/cast/${lastHash}`,
+                parent_cast_hash: lastHash
+            } : {})
         };
 
-        if (lastHash && !isFirstPartOfChapter) {
-            // Add the parent_url in the required Warpcast format
-            payload.parent_url = `https://warpcast.com/~/cast/${lastHash}`;
-            console.log('Adding parent URL:', payload.parent_url);
-        }
-        
         console.log('Sending cast with payload:', {
             ...payload,
             signer_uuid: '***',
@@ -128,6 +127,7 @@ async function sendCast(text, passage) {
         
         if (response.data.cast && response.data.cast.hash) {
             saveLastHash(response.data.cast.hash);
+            console.log('Successfully saved hash for threading:', response.data.cast.hash);
         }
 
         console.log('Cast sent successfully:', response.data);
@@ -137,6 +137,7 @@ async function sendCast(text, passage) {
             status: error.response?.status,
             data: error.response?.data,
             message: error.message,
+            stack: error.stack
         });
         throw error;
     }
